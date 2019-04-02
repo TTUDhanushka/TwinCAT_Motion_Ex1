@@ -1,0 +1,126 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4022.17">
+  <POU Name="MAIN" Id="{dffadb6e-f396-4be4-94c2-585b4cb42b02}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM MAIN
+VAR
+	masterAxis : Axis_Ref;
+	slaveAxis  : Axis_Ref;
+	
+	fb_masterStatus : MC_ReadStatus;
+	fb_slaveStatus 	: MC_ReadStatus;
+	
+	fb_masterPower :MC_Power;
+	fb_slavePower : MC_Power;
+	
+	fb_synchronize :MC_GearIn;
+	
+	fb_moveRelative : MC_MoveRelative;
+
+	
+	state		: INT;
+	bPower		: BOOL;
+	bMove		: BOOL;
+	nDistance	: LREAL := 500;
+	nVelocity	: LREAL := 50;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[
+CASE state OF
+	0: 	//Idle case
+	
+	fb_masterStatus(
+		Axis := masterAxis,
+		Enable := TRUE);
+		
+	fb_slaveStatus(
+		Axis := slaveAxis,
+		Enable := TRUE);
+		
+	IF NOT fb_masterStatus.Error AND NOT fb_slaveStatus.Error THEN
+		state := 10;
+	END_IF
+	
+	10: 	//Power up motors
+	
+	IF NOT fb_masterPower.Status THEN
+		fb_masterPower.Enable := NOT bPower;
+	END_IF
+	
+	fb_masterPower(
+		Axis := masterAxis,
+		Enable := bPower,
+		Enable_Positive := bPower,
+		Enable_Negative := bPower);
+		
+	fb_slavePower(
+		Axis := slaveAxis,
+		Enable := bPower,
+		Enable_Positive := bPower,
+		Enable_Negative := bPower);		
+	
+	IF fb_masterPower.Status AND fb_slavePower.Status THEN
+		state := 20;
+	END_IF
+	
+	20: 	//Synchronize motors
+	IF NOT fb_synchronize.InGear THEN
+		fb_synchronize.Execute := FALSE;
+	END_IF
+	
+	fb_synchronize(
+		Master := masterAxis,
+		Slave := slaveAxis,
+		Execute := TRUE);
+		
+	IF fb_synchronize.InGear THEN
+		state := 30;
+	END_IF
+
+	30: 	//Move relative 500mm at 50mm/s
+	
+	fb_moveRelative(
+		Axis := masterAxis,
+		Execute := bMove,
+		Distance := nDistance,
+		Velocity := nVelocity);
+END_CASE
+
+
+
+]]></ST>
+    </Implementation>
+    <LineIds Name="MAIN">
+      <LineId Id="10" Count="0" />
+      <LineId Id="2" Count="0" />
+      <LineId Id="11" Count="0" />
+      <LineId Id="14" Count="1" />
+      <LineId Id="18" Count="0" />
+      <LineId Id="20" Count="0" />
+      <LineId Id="24" Count="0" />
+      <LineId Id="22" Count="1" />
+      <LineId Id="21" Count="0" />
+      <LineId Id="25" Count="6" />
+      <LineId Id="48" Count="3" />
+      <LineId Id="36" Count="3" />
+      <LineId Id="41" Count="1" />
+      <LineId Id="44" Count="3" />
+      <LineId Id="43" Count="0" />
+      <LineId Id="32" Count="0" />
+      <LineId Id="19" Count="0" />
+      <LineId Id="54" Count="4" />
+      <LineId Id="81" Count="1" />
+      <LineId Id="80" Count="0" />
+      <LineId Id="59" Count="5" />
+      <LineId Id="68" Count="2" />
+      <LineId Id="67" Count="0" />
+      <LineId Id="71" Count="4" />
+      <LineId Id="77" Count="0" />
+      <LineId Id="12" Count="0" />
+      <LineId Id="104" Count="0" />
+      <LineId Id="109" Count="0" />
+      <LineId Id="108" Count="0" />
+      <LineId Id="105" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>
